@@ -5258,6 +5258,7 @@ export default function App() {
               );
             })()}
           </div>
+          </>
         )}
 
         {/* ── CHART TAB ── */}
