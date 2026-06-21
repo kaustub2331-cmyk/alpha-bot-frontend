@@ -3600,11 +3600,22 @@ export default function App() {
       userId: user?.id,
       onBotStateChange: (state) => setCloudBotStatus(state),
       onTradesChange: (eventType, payload) => {
-        // Realtime trade updates — trigger re-render
-        if (eventType === 'trade' || eventType === '__init__') {
-          // Force refresh of paper stats
-          setPaperTrades([...paperEngine.trades]);
-          setPaperPositions([...paperEngine.positions]);
+        // Cloud trades arrive two ways:
+        //  - '__init__': payload is the full array of trades fetched on load
+        //  - realtime INSERT/UPDATE: payload is a single trade object
+        if (eventType === '__init__') {
+          const trades = Array.isArray(payload) ? payload.filter(Boolean) : [];
+          setPaperTrades(trades);
+          setPaperPositions(trades.filter(t => t?.status === 'open'));
+        } else if (payload && payload.id) {
+          setPaperTrades(prev => {
+            const idx = prev.findIndex(t => t.id === payload.id);
+            return idx >= 0 ? prev.map((t, i) => (i === idx ? payload : t)) : [payload, ...prev];
+          });
+          setPaperPositions(prev => {
+            const withoutThis = prev.filter(t => t.id !== payload.id);
+            return payload.status === 'open' ? [payload, ...withoutThis] : withoutThis;
+          });
         }
       },
       onSettingsChange: (key, value) => {
